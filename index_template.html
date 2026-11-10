@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
+<title>数学课标练习 · 填空题</title>
+<style>
+:root{
+  --bg:#f2f5fa; --card:#ffffff; --ink:#141a24; --ink2:#5b6675; --ink3:#8b95a5;
+  --line:#e3e8f0; --pri:#2563eb; --pri-soft:#e8efff; --ok:#12a150; --ok-soft:#e6f7ee;
+  --bad:#e02d2d; --bad-soft:#fdecec; --warn:#c07800; --warn-soft:#fff6e0;
+  --radius:16px; --shadow:0 1px 2px rgba(16,24,40,.04),0 6px 20px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0f1319; --card:#171d26; --ink:#e8edf5; --ink2:#a3aebd; --ink3:#6f7b8c;
+    --line:#242c38; --pri:#5b8dff; --pri-soft:#1b2740; --ok:#3ecf7f; --ok-soft:#12291d;
+    --bad:#ff6b6b; --bad-soft:#2c1618; --warn:#e3a838; --warn-soft:#2b2312;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.35);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+  font-size:16px; line-height:1.75; -webkit-text-size-adjust:100%;
+  padding-bottom:calc(72px + env(safe-area-inset-bottom));
+}
+/* ---------- 顶栏 ---------- */
+header.top{
+  position:sticky; top:0; z-index:30;
+  background:color-mix(in srgb, var(--bg) 88%, transparent);
+  -webkit-backdrop-filter:saturate(180%) blur(14px); backdrop-filter:saturate(180%) blur(14px);
+  border-bottom:1px solid var(--line);
+  padding-top:env(safe-area-inset-top);
+}
+.top-in{display:flex; align-items:center; gap:10px; padding:10px 14px 8px}
+.brand{flex:1; min-width:0}
+.brand h1{font-size:17px; margin:0; letter-spacing:.2px; font-weight:700}
+.brand p{margin:1px 0 0; font-size:11.5px; color:var(--ink3); line-height:1.4}
+.seg{display:flex; background:var(--pri-soft); border-radius:999px; padding:3px; flex:0 0 auto}
+.seg button{
+  border:0; background:transparent; color:var(--ink2); font-size:13px; font-weight:600;
+  padding:6px 13px; border-radius:999px; font-family:inherit; cursor:pointer; transition:.18s;
+}
+.seg button.on{background:var(--card); color:var(--pri); box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.tabs{display:flex; gap:7px; overflow-x:auto; padding:0 14px 10px; scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{
+  flex:0 0 auto; border:1px solid var(--line); background:var(--card); color:var(--ink2);
+  font-size:12.5px; font-weight:600; padding:6px 12px; border-radius:999px;
+  font-family:inherit; cursor:pointer; white-space:nowrap; transition:.15s;
+}
+.tabs button.on{background:var(--pri); border-color:var(--pri); color:#fff}
+/* ---------- 卡片 ---------- */
+main{padding:14px 12px 8px; max-width:720px; margin:0 auto}
+.sec{
+  font-size:12.5px; color:var(--ink3); font-weight:700; letter-spacing:.5px;
+  margin:22px 6px 8px; display:flex; align-items:center; gap:8px;
+}
+.sec:first-child{margin-top:2px}
+.sec::after{content:""; flex:1; height:1px; background:var(--line)}
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+  box-shadow:var(--shadow); padding:14px 15px 10px; margin-bottom:12px; position:relative;
+  transition:border-color .2s;
+}
+.card.ok{border-color:color-mix(in srgb,var(--ok) 45%, var(--line))}
+.card.bad{border-color:color-mix(in srgb,var(--bad) 40%, var(--line))}
+.qhead{display:flex; align-items:center; gap:8px; margin-bottom:6px}
+.qno{font-size:13px; font-weight:800; color:var(--pri); letter-spacing:.3px}
+.qtag{font-size:11px; color:var(--ink3); background:var(--bg); border-radius:6px; padding:1px 6px}
+.qst{margin-left:auto; font-size:12px; font-weight:700; padding:1px 8px; border-radius:999px; display:none}
+.qst.ok{display:inline-block; color:var(--ok); background:var(--ok-soft)}
+.qst.bad{display:inline-block; color:var(--bad); background:var(--bad-soft)}
+.qbody{font-size:15.5px; line-height:2.15; word-break:break-word}
+.qbody input{
+  font-family:inherit; font-size:16px; color:var(--ink);
+  background:var(--pri-soft); border:0; border-bottom:2px solid color-mix(in srgb,var(--pri) 35%, transparent);
+  border-radius:6px 6px 0 0; padding:0 6px; margin:0 2px; height:1.7em;
+  min-width:2.6em; max-width:100%; text-align:center; outline:none;
+  transition:background .15s, border-color .15s;
+}
+.qbody input::placeholder{color:var(--ink3); font-size:13px; letter-spacing:1px}
+.qbody input:focus{background:var(--card); border-bottom-color:var(--pri); box-shadow:0 2px 0 0 var(--pri)}
+.qbody input.ok{color:var(--ok); background:var(--ok-soft); border-bottom-color:var(--ok); font-weight:600}
+.qbody input.bad{color:var(--bad); background:var(--bad-soft); border-bottom-color:var(--bad)}
+.qbody input.warn{color:var(--warn); background:var(--warn-soft); border-bottom-color:var(--warn)}
+.qbody input[readonly]{cursor:default}
+.foot{display:flex; gap:8px; align-items:center; margin-top:10px; padding-top:9px; border-top:1px dashed var(--line)}
+.foot .sp{flex:1}
+.btn{
+  font-family:inherit; font-size:13px; font-weight:600; border-radius:9px; padding:7px 13px;
+  border:1px solid var(--line); background:var(--card); color:var(--ink2); cursor:pointer; transition:.15s;
+}
+.btn:active{transform:scale(.97)}
+.btn.pri{background:var(--pri); border-color:var(--pri); color:#fff}
+.btn.ghost{border-color:transparent; background:transparent; color:var(--ink3); padding:7px 6px}
+.res{margin-top:8px; font-size:13.5px; line-height:1.7; display:none}
+.res.show{display:block}
+.res .li{color:var(--bad)}
+.res .li b{font-weight:700}
+.res .allok{color:var(--ok); font-weight:600}
+/* ---------- 背诵模式 ---------- */
+.recite{padding:8px 12px 20px; max-width:720px; margin:0 auto}
+.rcard{
+  background:var(--card); border:1px solid var(--line); border-radius:20px; box-shadow:var(--shadow);
+  padding:26px 20px; min-height:46vh; display:flex; flex-direction:column; justify-content:center;
+  text-align:left; font-size:18px; line-height:2.1; cursor:pointer; user-select:none;
+}
+.rcard .blank{
+  display:inline-block; min-width:3.2em; border-bottom:2px solid var(--pri); margin:0 4px;
+  text-align:center; color:var(--pri); font-weight:700;
+}
+.rcard .ansline{
+  margin-top:16px; padding-top:14px; border-top:1px dashed var(--line);
+  font-size:16px; color:var(--ok); display:none; line-height:1.95;
+}
+.rcard.reveal .ansline{display:block}
+.hinttap{font-size:12.5px; color:var(--ink3); text-align:center; margin-top:14px}
+.rnav{display:flex; gap:10px; align-items:center; margin-top:14px}
+.rnav .btn{flex:1; padding:13px; font-size:15px; border-radius:12px}
+.rprog{font-size:13px; color:var(--ink3); text-align:center; margin-top:10px; font-variant-numeric:tabular-nums}
+/* ---------- 底栏 ---------- */
+.statbar{
+  position:fixed; left:0; right:0; bottom:0; z-index:30;
+  background:color-mix(in srgb, var(--card) 92%, transparent);
+  -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+  border-top:1px solid var(--line);
+  padding:9px 14px calc(9px + env(safe-area-inset-bottom));
+  display:flex; align-items:center; gap:10px; font-size:13px;
+  max-width:720px; margin:0 auto;
+}
+.statbar b{font-variant-numeric:tabular-nums}
+.statbar .ok{color:var(--ok)} .statbar .bad{color:var(--bad)}
+.statbar .sp{flex:1}
+.toast{
+  position:fixed; left:50%; bottom:calc(96px + env(safe-area-inset-bottom)); transform:translate(-50%,12px);
+  background:rgba(20,26,36,.92); color:#fff; font-size:13.5px; padding:9px 16px; border-radius:10px;
+  opacity:0; pointer-events:none; transition:.25s; z-index:60; white-space:nowrap; max-width:88vw;
+}
+.toast.show{opacity:1; transform:translate(-50%,0)}
+.empty{text-align:center; color:var(--ink3); font-size:14px; padding:60px 20px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <h1>数学课标练习</h1>
+      <p>数学课程标准 2022 版 · 填空 40 题</p>
+    </div>
+    <div class="seg" id="modeSwitch">
+      <button data-mode="quiz" class="on">答题</button>
+      <button data-mode="recite">背诵</button>
+    </div>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+
+<main id="listView"></main>
+<section class="recite" id="reciteView" style="display:none"></section>
+
+<div class="statbar" id="statbar"></div>
+<div class="toast" id="toast"></div>
+
+<script type="application/json" id="DATA">__DATA_JSON__</script>
+<script>
+(function(){
+"use strict";
+var DATA = JSON.parse(document.getElementById('DATA').textContent);
+var KEY = 'kebiao_quiz_v1';
+var PUNCT = /[\s\u3000，。、；：""''（）()《》〈〉？！,.;:?!"'`·—…\-_~～]/g;
+
+// ---------- 构建扁平题库 ----------
+var SETS = DATA.sets.map(function(s, si){
+  return { si: si, title: s.title, no: s.no, items: s.items };
+});
+var QS = [];
+SETS.forEach(function(s){
+  s.items.forEach(function(it){
+    QS.push({
+      key: s.si + '-' + it.no, si: s.si, setNo: s.no, no: it.no,
+      segs: it.segs, fills: it.fills, full: it.a,
+      n: it.fills.length, setId: 's' + s.si
+    });
+  });
+});
+var byKey = {};
+QS.forEach(function(q){ byKey[q.key] = q; });
+
+// ---------- 状态 ----------
+var state = load() || { answers:{}, status:{}, revealed:{}, view:'all', mode:'quiz', rIdx:0 };
+if (!state.answers) state.answers = {};
+if (!state.status) state.status = {};
+if (!state.revealed) state.revealed = {};
+if (typeof state.rIdx !== 'number') state.rIdx = 0;
+
+function load(){
+  try { var s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null; } catch(e){ return null; }
+}
+var saveTimer = null;
+function save(now){
+  if (saveTimer) clearTimeout(saveTimer);
+  var go = function(){
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
+  };
+  if (now) go(); else saveTimer = setTimeout(go, 250);
+}
+
+// ---------- 工具 ----------
+function norm(s){ return (s || '').replace(PUNCT, '').toLowerCase(); }
+function lev(a, b){
+  if (a === b) return 0;
+  var m = a.length, n = b.length;
+  if (!m) return n; if (!n) return m;
+  var prev = new Array(n + 1), cur = new Array(n + 1), i, j;
+  for (j = 0; j <= n; j++) prev[j] = j;
+  for (i = 1; i <= m; i++){
+    cur[0] = i;
+    for (j = 1; j <= n; j++){
+      cur[j] = Math.min(prev[j] + 1, cur[j-1] + 1, prev[j-1] + (a.charAt(i-1) === b.charAt(j-1) ? 0 : 1));
+    }
+    var t = prev; prev = cur; cur = t;
+  }
+  return prev[n];
+}
+function sim(a, b){
+  if (!a || !b) return 0;
+  var d = lev(a, b), L = Math.max(a.length, b.length);
+  return 1 - d / L;
+}
+function grade(input, fill){
+  var a = norm(input), b = norm(fill);
+  if (!a) return 'empty';
+  if (a === b) return 'exact';
+  if (sim(a, b) >= 0.8) return 'near';
+  return 'wrong';
+}
+function el(tag, cls, txt){
+  var d = document.createElement(tag);
+  if (cls) d.className = cls;
+  if (txt != null) d.textContent = txt;
+  return d;
+}
+function toast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(function(){ t.classList.remove('show'); }, 1600);
+}
+function curList(){
+  return state.view === 'all' ? QS : QS.filter(function(q){ return String(q.setNo) === state.view; });
+}
+function shortTitle(s){
+  var m = s.title.match(/^练习\s*(\d+)/);
+  var n = m ? '练习' + m[1] : s.title;
+  return s.no === state.view ? s.title : n;
+}
+
+// ---------- 标签栏 ----------
+function renderTabs(){
+  var box = document.getElementById('tabs');
+  box.innerHTML = '';
+  var all = el('button', state.view === 'all' ? 'on' : '', '全部 40 题');
+  all.onclick = function(){ state.view = 'all'; state.rIdx = 0; save(true); renderTabs(); render(); };
+  box.appendChild(all);
+  SETS.forEach(function(s){
+    var b = el('button', state.view === String(s.no) ? 'on' : '', '练习 ' + s.no);
+    b.title = s.title;
+    b.onclick = function(){ state.view = String(s.no); state.rIdx = 0; save(true); renderTabs(); render(); };
+    box.appendChild(b);
+  });
+}
+
+// ---------- 答题模式 ----------
+function renderList(){
+  var box = document.getElementById('listView');
+  box.innerHTML = '';
+  var list = curList();
+  var lastSet = null;
+  list.forEach(function(q){
+    if (q.si !== lastSet){
+      lastSet = q.si;
+      var sec = el('div', 'sec', SETS[q.si].title);
+      box.appendChild(sec);
+    }
+    box.appendChild(buildCard(q));
+  });
+  if (!list.length) box.appendChild(el('div', 'empty', '本组暂无题目'));
+}
+
+function buildCard(q){
+  var card = el('div', 'card');
+  card.id = 'c-' + q.key;
+
+  var head = el('div', 'qhead');
+  head.appendChild(el('span', 'qno', '第 ' + q.no + ' 题'));
+  head.appendChild(el('span', 'qtag', '练习' + q.setNo));
+  var st = el('span', 'qst');
+  head.appendChild(st);
+  card.appendChild(head);
+
+  var body = el('div', 'qbody');
+  for (var i = 0; i < q.segs.length; i++){
+    if (q.segs[i]) body.appendChild(document.createTextNode(q.segs[i]));
+    if (i < q.n){
+      var inp = document.createElement('input');
+      inp.type = 'text';
+      inp.autocomplete = 'off';
+      inp.autocapitalize = 'off';
+      inp.spellcheck = false;
+      inp.setAttribute('aria-label', '第' + q.no + '题第' + (i + 1) + '空');
+      inp.placeholder = '第' + (i + 1) + '空';
+      var val = state.answers[q.key + '-' + i];
+      if (val) inp.value = val;
+      var w = Math.min(15, Math.max(2.8, q.fills[i].length * 1.05 + 0.6));
+      inp.style.width = w + 'em';
+      inp.dataset.k = q.key + '-' + i;
+      inp.addEventListener('input', function(){
+        var k = this.dataset.k;
+        if (this.value) state.answers[k] = this.value; else delete state.answers[k];
+        this.classList.remove('ok', 'bad', 'warn');
+        save();
+        updateStat();
+      });
+      inp.addEventListener('keydown', function(e){
+        if (e.key === 'Enter'){ e.preventDefault(); this.blur(); checkQ(q); }
+      });
+      body.appendChild(inp);
+    }
+  }
+  card.appendChild(body);
+
+  var foot = el('div', 'foot');
+  var bCheck = el('button', 'btn pri', '检查');
+  bCheck.onclick = function(){ checkQ(q); };
+  var bShow = el('button', 'btn', '看答案');
+  bShow.onclick = function(){
+    var inputs = card.querySelectorAll('input');
+    q.fills.forEach(function(f, i){
+      inputs[i].value = f;
+      state.answers[q.key + '-' + i] = f;
+      inputs[i].classList.add('ok');
+    });
+    state.revealed[q.key] = true;
+    card.classList.remove('bad'); card.classList.add('ok');
+    st.className = 'qst ok'; st.textContent = '已看答案';
+    state.status[q.key] = 'seen';
+    save(); updateStat();
+  };
+  var bClear = el('button', 'btn ghost', '清空');
+  bClear.onclick = function(){
+    var inputs = card.querySelectorAll('input');
+    for (var i = 0; i < inputs.length; i++){
+      inputs[i].value = ''; inputs[i].classList.remove('ok', 'bad', 'warn');
+      delete state.answers[q.key + '-' + i];
+    }
+    delete state.status[q.key]; delete state.revealed[q.key];
+    card.classList.remove('ok', 'bad');
+    st.className = 'qst'; st.textContent = '';
+    res.className = 'res'; res.innerHTML = '';
+    save(); updateStat();
+  };
+  foot.appendChild(bCheck); foot.appendChild(bShow);
+  foot.appendChild(el('span', 'sp'));
+  foot.appendChild(bClear);
+  card.appendChild(foot);
+
+  var res = el('div', 'res');
+  card.appendChild(res);
+
+  // 恢复已判定的状态
+  var s = state.status[q.key];
+  if (s === 'ok' || s === 'bad'){
+    applyResult(q, card, st, res, s === 'ok');
+  } else if (s === 'seen'){
+    var inputs0 = card.querySelectorAll('input');
+    q.fills.forEach(function(f, i){
+      if (!inputs0[i].value){ inputs0[i].value = f; }
+      inputs0[i].classList.add('ok');
+    });
+    card.classList.add('ok');
+    st.className = 'qst ok'; st.textContent = '已看答案';
+  } else {
+    // 有草稿的恢复草稿判定外观（不复判，避免干扰输入）
+    var inputs1 = card.querySelectorAll('input');
+    for (var j = 0; j < inputs1.length; j++){
+      if (inputs1[j].value && state.revealed[q.key]) inputs1[j].classList.add('ok');
+    }
+  }
+  return card;
+}
+
+function applyResult(q, card, st, res, allok){
+  var inputs = card.querySelectorAll('input');
+  var wrongs = [];
+  var i;
+  for (i = 0; i < q.n; i++){
+    var g = grade(inputs[i].value, q.fills[i]);
+    if (g === 'exact' || g === 'near'){
+      inputs[i].classList.remove('bad', 'warn'); inputs[i].classList.add('ok');
+    } else {
+      inputs[i].classList.remove('ok', 'warn'); inputs[i].classList.add('bad');
+      wrongs.push({ i: i, fill: q.fills[i], got: inputs[i].value || '（空）' });
+    }
+  }
+  if (!wrongs.length){
+    card.classList.remove('bad'); card.classList.add('ok');
+    st.className = 'qst ok'; st.textContent = '✓ 全对';
+    res.className = 'res show';
+    var nearList = [];
+    for (i = 0; i < q.n; i++){
+      if (grade(inputs[i].value, q.fills[i]) === 'near') nearList.push(q.fills[i]);
+    }
+    res.innerHTML = '<span class="allok">✓ 全部正确</span>' +
+      (nearList.length ? ' <span style="color:var(--warn)">（' + esc(nearList.join('、')) + ' 写法略有出入，已判对）</span>' : '');
+    state.status[q.key] = 'ok';
+  } else {
+    card.classList.remove('ok'); card.classList.add('bad');
+    st.className = 'qst bad'; st.textContent = '错 ' + wrongs.length + ' 空';
+    res.className = 'res show';
+    res.innerHTML = wrongs.map(function(w){
+      return '<div class="li">第' + (w.i + 1) + '空 正确答案：<b>' + esc(w.fill) + '</b>' +
+             (w.got && w.got !== '（空）' ? ' <span style="color:var(--ink3)">（你填：' + esc(w.got) + '）</span>' : '') + '</div>';
+    }).join('');
+    state.status[q.key] = 'bad';
+  }
+  save(); updateStat();
+}
+
+function esc(s){
+  return String(s).replace(/[&<>"]/g, function(c){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c];
+  });
+}
+
+function checkQ(q){
+  var card = document.getElementById('c-' + q.key);
+  if (!card) return;
+  var inputs = card.querySelectorAll('input');
+  var empty = 0;
+  for (var i = 0; i < q.n; i++){ if (!inputs[i].value.trim()) empty++; }
+  if (empty === q.n){ toast('先填一填空格'); return; }
+  var st = card.querySelector('.qst');
+  var res = card.querySelector('.res');
+  // 先判定，看是否全对
+  var wrongs = 0;
+  for (var j = 0; j < q.n; j++){
+    var g = grade(inputs[j].value, q.fills[j]);
+    if (g !== 'exact' && g !== 'near' && inputs[j].value.trim()) wrongs++;
+  }
+  applyResult(q, card, st, res, wrongs === 0);
+}
+
+// ---------- 背诵模式 ----------
+function renderRecite(){
+  var box = document.getElementById('reciteView');
+  var list = curList();
+  if (!list.length){ box.innerHTML = ''; box.appendChild(el('div', 'empty', '本组暂无题目')); return; }
+  if (state.rIdx >= list.length) state.rIdx = 0;
+  var q = list[state.rIdx];
+  box.innerHTML = '';
+
+  var card = el('div', 'rcard');
+  var frag = document.createDocumentFragment();
+  for (var i = 0; i < q.segs.length; i++){
+    if (q.segs[i]) frag.appendChild(document.createTextNode(q.segs[i]));
+    if (i < q.n){
+      var b = el('span', 'blank', '第' + (i + 1) + '空');
+      frag.appendChild(b);
+    }
+  }
+  var main = el('div');
+  main.appendChild(frag);
+  card.appendChild(main);
+
+  var ans = el('div', 'ansline');
+  ans.textContent = q.full;
+  card.appendChild(ans);
+
+  var hint = el('div', 'hinttap', '轻点卡片看答案');
+  card.appendChild(hint);
+
+  var revealed = false;
+  card.addEventListener('click', function(){
+    revealed = !revealed;
+    card.classList.toggle('reveal', revealed);
+    hint.textContent = revealed ? '轻点收起' : '轻点卡片看答案';
+  });
+
+  // 左右滑动切换
+  var sx = 0, sy = 0, tracking = false;
+  card.addEventListener('touchstart', function(e){
+    var t = e.touches[0]; sx = t.clientX; sy = t.clientY; tracking = true;
+  }, {passive:true});
+  card.addEventListener('touchend', function(e){
+    if (!tracking) return;
+    tracking = false;
+    var t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+    if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.6){
+      go(dx < 0 ? 1 : -1);
+    }
+  }, {passive:true});
+
+  box.appendChild(card);
+
+  var nav = el('div', 'rnav');
+  var prev = el('button', 'btn', '← 上一题');
+  prev.onclick = function(){ go(-1); };
+  var next = el('button', 'btn pri', '下一题 →');
+  next.onclick = function(){ go(1); };
+  nav.appendChild(prev); nav.appendChild(next);
+  box.appendChild(nav);
+
+  var prog = el('div', 'rprog', (state.rIdx + 1) + ' / ' + list.length + ' 　·　练习' + q.setNo + ' 第' + q.no + '题');
+  box.appendChild(prog);
+
+  var tip = el('div', 'hinttap', '空格键 / → 下一题，← 上一题');
+  tip.style.marginTop = '6px';
+  box.appendChild(tip);
+}
+
+function go(d){
+  var list = curList();
+  if (!list.length) return;
+  state.rIdx = (state.rIdx + d + list.length) % list.length;
+  save();
+  renderRecite();
+}
+
+// ---------- 统计 ----------
+function updateStat(){
+  var list = curList();
+  var done = 0, ok = 0, seen = 0;
+  list.forEach(function(q){
+    var s = state.status[q.key];
+    if (s === 'ok'){ done++; ok++; }
+    else if (s === 'bad'){ done++; }
+    else if (s === 'seen'){ done++; seen++; }
+  });
+  var bar = document.getElementById('statbar');
+  var rate = (done - seen) > 0 ? Math.round(ok / (done - seen) * 100) : 0;
+  bar.innerHTML = '';
+  var l = el('span');
+  l.innerHTML = '已做 <b>' + done + '</b>/' + list.length +
+                '　正确 <b class="ok">' + ok + '</b>' +
+                '　错误 <b class="bad">' + (done - ok - seen) + '</b>' +
+                ((done - seen) > 0 ? '　<b>' + rate + '%</b>' : '');
+  bar.appendChild(l);
+  bar.appendChild(el('span', 'sp'));
+  var rb = el('button', 'btn ghost', '清空记录');
+  rb.onclick = function(){
+    if (!confirm('清空当前范围的全部作答记录？')) return;
+    var keys = {};
+    list.forEach(function(q){ keys[q.key] = 1; });
+    Object.keys(state.answers).forEach(function(k){
+      if (keys[k.split('-').slice(0, 2).join('-')]) delete state.answers[k];
+    });
+    Object.keys(state.status).forEach(function(k){ if (keys[k]) delete state.status[k]; });
+    Object.keys(state.revealed).forEach(function(k){ if (keys[k]) delete state.revealed[k]; });
+    save(true); render(); toast('已清空');
+  };
+  bar.appendChild(rb);
+}
+
+// ---------- 渲染入口 ----------
+function render(){
+  var lv = document.getElementById('listView');
+  var rv = document.getElementById('reciteView');
+  if (state.mode === 'quiz'){
+    lv.style.display = ''; rv.style.display = 'none';
+    renderList();
+  } else {
+    lv.style.display = 'none'; rv.style.display = '';
+    renderRecite();
+  }
+  updateStat();
+}
+
+document.getElementById('modeSwitch').addEventListener('click', function(e){
+  var b = e.target.closest('button');
+  if (!b) return;
+  state.mode = b.dataset.mode;
+  Array.prototype.forEach.call(this.querySelectorAll('button'), function(x){
+    x.classList.toggle('on', x === b);
+  });
+  save(true); render();
+});
+
+document.addEventListener('keydown', function(e){
+  if (state.mode !== 'recite') return;
+  if (e.key === 'ArrowRight'){ go(1); }
+  else if (e.key === 'ArrowLeft'){ go(-1); }
+  else if (e.key === ' '){ e.preventDefault(); var c = document.querySelector('.rcard'); if (c) c.click(); }
+});
+
+// 恢复模式按钮
+Array.prototype.forEach.call(document.querySelectorAll('#modeSwitch button'), function(b){
+  b.classList.toggle('on', b.dataset.mode === state.mode);
+});
+
+renderTabs();
+render();
+})();
+</script>
+</body>
+</html>
