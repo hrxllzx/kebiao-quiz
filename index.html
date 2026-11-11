@@ -195,11 +195,12 @@ var byKey = {};
 QS.forEach(function(q){ byKey[q.key] = q; });
 
 // ---------- 状态 ----------
-var state = load() || { answers:{}, status:{}, revealed:{}, view:'all', mode:'quiz', rIdx:0 };
+var state = load() || { answers:{}, status:{}, revealed:{}, view:'all', mode:'quiz', rIdx:0, shuffleOrder:[] };
 if (!state.answers) state.answers = {};
 if (!state.status) state.status = {};
 if (!state.revealed) state.revealed = {};
 if (typeof state.rIdx !== 'number') state.rIdx = 0;
+if (!state.shuffleOrder) state.shuffleOrder = [];
 
 function load(){
   try { var s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null; } catch(e){ return null; }
@@ -253,7 +254,19 @@ function toast(msg){
   t.textContent = msg; t.classList.add('show');
   clearTimeout(t._h); t._h = setTimeout(function(){ t.classList.remove('show'); }, 1600);
 }
+function shuffleKeys(){
+  var a = QS.map(function(q){ return q.key; });
+  for (var i = a.length - 1; i > 0; i--){
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
 function curList(){
+  if (state.view === 'shuffle'){
+    if (!state.shuffleOrder || !state.shuffleOrder.length) state.shuffleOrder = shuffleKeys();
+    return state.shuffleOrder.map(function(k){ return byKey[k]; }).filter(Boolean);
+  }
   return state.view === 'all' ? QS : QS.filter(function(q){ return String(q.setNo) === state.view; });
 }
 function shortTitle(s){
@@ -269,6 +282,21 @@ function renderTabs(){
   var all = el('button', state.view === 'all' ? 'on' : '', '全部 40 题');
   all.onclick = function(){ state.view = 'all'; state.rIdx = 0; save(true); renderTabs(); render(); };
   box.appendChild(all);
+
+  var sh = el('button', state.view === 'shuffle' ? 'on' : '', '乱序 ' + QS.length + ' 题');
+  sh.title = '全部题目打乱顺序；再点一次可重新洗牌';
+  sh.onclick = function(){
+    if (state.view === 'shuffle'){
+      state.shuffleOrder = shuffleKeys();
+      toast('已重新打乱');
+    } else {
+      if (!state.shuffleOrder || !state.shuffleOrder.length) state.shuffleOrder = shuffleKeys();
+      state.view = 'shuffle';
+      toast('已打乱全部 ' + QS.length + ' 题');
+    }
+    state.rIdx = 0; save(true); renderTabs(); render();
+  };
+  box.appendChild(sh);
   SETS.forEach(function(s){
     var b = el('button', state.view === String(s.no) ? 'on' : '', '练习 ' + s.no);
     b.title = s.title;
