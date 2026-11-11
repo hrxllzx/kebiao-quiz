@@ -280,18 +280,22 @@ function renderTabs(){
 // ---------- 答题模式 ----------
 function renderList(){
   var box = document.getElementById('listView');
-  box.innerHTML = '';
   var list = curList();
-  var lastSet = null;
-  list.forEach(function(q){
-    if (q.si !== lastSet){
-      lastSet = q.si;
-      var sec = el('div', 'sec', SETS[q.si].title);
-      box.appendChild(sec);
-    }
-    box.appendChild(buildCard(q));
-  });
-  if (!list.length) box.appendChild(el('div', 'empty', '本组暂无题目'));
+  box.innerHTML = '';
+  if (!list.length){ box.appendChild(el('div', 'empty', '本组暂无题目')); return; }
+  if (state.rIdx >= list.length) state.rIdx = 0;
+  if (state.rIdx < 0) state.rIdx = 0;
+  var q = list[state.rIdx];
+  box.appendChild(buildCard(q));
+  var nav = el('div', 'rnav');
+  var prev = el('button', 'btn', '← 上一题');
+  prev.onclick = function(){ go(-1); };
+  var next = el('button', 'btn pri', '下一题 →');
+  next.onclick = function(){ go(1); };
+  nav.appendChild(prev); nav.appendChild(next);
+  box.appendChild(nav);
+  box.appendChild(el('div', 'rprog', (state.rIdx + 1) + ' / ' + list.length + ' 　·　练习' + q.setNo + ' 第' + q.no + '题'));
+  window.scrollTo({top:0, behavior:'smooth'});
 }
 
 function buildCard(q){
@@ -530,7 +534,7 @@ function go(d){
   if (!list.length) return;
   state.rIdx = (state.rIdx + d + list.length) % list.length;
   save();
-  renderRecite();
+  if (state.mode === 'quiz') renderList(); else renderRecite();
 }
 
 // ---------- 统计 ----------
