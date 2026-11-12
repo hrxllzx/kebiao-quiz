@@ -380,6 +380,128 @@ function shuffle(arr){
   return a;
 }
 
+
+/* ================= 登录会话（账号 + 口令） ================= */
+var SESSION_KEY = 'kebiao_session';
+function getSession(){
+  try { var s = sessionStorage.getItem(SESSION_KEY); if (s) return s; } catch(e){}
+  try { var l = localStorage.getItem(SESSION_KEY); if (l){ var o = JSON.parse(l); if (o && o.uid) return o.uid; } } catch(e){}
+  return null;
+}
+function setSession(uid, remember){
+  try { sessionStorage.setItem(SESSION_KEY, uid); } catch(e){}
+  if (remember){ try { localStorage.setItem(SESSION_KEY, JSON.stringify({uid:uid})); } catch(e){} }
+  else { try { localStorage.removeItem(SESSION_KEY); } catch(e){} }
+}
+function clearSession(){
+  try { sessionStorage.removeItem(SESSION_KEY); } catch(e){}
+  try { localStorage.removeItem(SESSION_KEY); } catch(e){}
+}
+function setChrome(show){
+  var nav = document.getElementById('navSeg'), acct = document.getElementById('acctBtn'), tabs = document.getElementById('tabs');
+  nav.style.visibility = show ? 'visible' : 'hidden';
+  acct.style.visibility = show ? 'visible' : 'hidden';
+  if (!show) tabs.style.display = 'none';
+}
+
+function renderLogin(){
+  setChrome(false);
+  var root = document.getElementById('root');
+  root.innerHTML = '';
+  var box = el('div', 'panel');
+  box.appendChild(el('h3', null, '请登录账号'));
+  box.appendChild(el('p', 'tip', '选择一个账号并输入口令。错题与进度按账号分开记录，选错账号会把成绩记到别人名下。'));
+
+  var uids = Object.keys(S.accounts);
+  uids.forEach(function(uid){
+    var a = S.accounts[uid];
+    var row = el('div', 'field');
+    row.style.alignItems = 'center';
+
+    var info = el('div');
+    info.style.flex = '1';
+    info.style.minWidth = '96px';
+    var nm = el('div'); nm.style.fontWeight = '700';
+    nm.textContent = a.name + (a.hash ? ' 🔒' : '');
+    info.appendChild(nm);
+    var sub = el('div', 'tip');
+    sub.style.margin = '2px 0 0';
+    var wbN = Object.keys(a.wrongbook || {}).length;
+    sub.textContent = '错题 ' + wbN + ' 题' + (a.lastLogin ? '　最近登录 ' + fmtDate(a.lastLogin) : '');
+    info.appendChild(sub);
+    row.appendChild(info);
+
+    var pin = document.createElement('input');
+    pin.type = 'password'; pin.placeholder = a.hash ? '口令' : '首次登录，稍后设置';
+    pin.style.maxWidth = '128px';
+    if (!a.hash) pin.disabled = true;
+    row.appendChild(pin);
+
+    var go = el('button', 'btn pri', '登录');
+    go.onclick = function(){ doLogin(uid, pin.value); };
+    pin.addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); go.click(); } });
+    row.appendChild(go);
+    box.appendChild(row);
+  });
+
+  var row2 = el('div', 'field');
+  var bNew = el('button', 'btn', '＋ 新建账号');
+  bNew.onclick = function(){ newAccountFlow(true); };
+  var bImp = el('button', 'btn ghost', '导入数据');
+  bImp.onclick = function(){ importFlow(); };
+  row2.appendChild(bNew); row2.appendChild(bImp);
+  box.appendChild(row2);
+
+  root.appendChild(box);
+  root.appendChild(el('div', 'empty', '忘了口令：本机无法找回。可在另一台设备用“导出数据”生成同步码，返回本页点“导入数据”还原。'));
+}
+
+function doLogin(uid, pass){
+  var a = S.accounts[uid];
+  if (!a) return;
+  var enter = function(){
+    a.lastLogin = Date.now();
+    S.currentUid = uid;
+    setSession(uid, !!S.rememberLogin);
+    UI.test = (a.currentTest && a.currentTest.keys && a.currentTest.keys.length) ? a.currentTest : null;
+    UI.view = (UI.test && !UI.test.submitted) ? 'test' : 'practice';
+    save(true);
+    setChrome(true); setNav(); renderTabs(); render();
+    toast('已登录「' + a.name + '」');
+  };
+  if (!a.hash){
+    askSetPass(a, function(ok){
+      if (!ok){ toast('已跳过，本账号无口令保护'); enter(); return; }
+      enter();
+    });
+    return;
+  }
+  hashPass(pass, a.salt, function(h){
+    if (h === a.hash) enter();
+    else toast('口令不对');
+  });
+}
+
+function askSetPass(acct, cb){
+  var wrap = document.createElement('div');
+  wrap.appendChild(el('h4', null, '为「' + acct.name + '」设置口令'));
+  wrap.appendChild(el('p', null, '口令只保存在本机，用于避免把成绩记到别的账号。忘记后本机无法找回，请记牢。'));
+  var i1 = document.createElement('input'); i1.type = 'password'; i1.placeholder = '设置口令（至少 4 位）';
+  var i2 = document.createElement('input'); i2.type = 'password'; i2.placeholder = '再输一次';
+  wrap.appendChild(i1); wrap.appendChild(i2);
+  var row = el('div', 'row');
+  var skip = el('button', 'btn ghost', '暂不设置'); skip.onclick = function(){ closeModal(); cb(false); };
+  var ok = el('button', 'btn pri', '保存并登录'); ok.onclick = function(){
+    var v = i1.value, w = i2.value;
+    if (v.length < 4){ toast('口令至少 4 位'); return; }
+    if (v !== w){ toast('两次输入不一致'); return; }
+    acct.salt = makeSalt();
+    hashPass(v, acct.salt, function(h){ acct.hash = h; save(true); closeModal(); cb(true); });
+  };
+  row.appendChild(skip); row.appendChild(ok); wrap.appendChild(row);
+  openModal(wrap, function(m){ var i = m.querySelector('input'); if (i) i.focus(); });
+}
+
 /* ================= 视图状态 ================= */
 var UI = { view:'practice', practiceSource:'set', test:null };
 try { UI.test = (A().currentTest && A().currentTest.keys && A().currentTest.keys.length) ? A().currentTest : null; } catch(e){}
@@ -395,7 +517,7 @@ function setNav(){
       save(true); setNav(); render();
     };
   }
-  document.getElementById('acctName').textContent = A().name;
+  document.getElementById('acctName').textContent = A().name + (A().hash ? ' 🔒' : '');
 }
 
 /* ---------- 二级 tabs：仅练习模式显示 ---------- */
@@ -919,16 +1041,13 @@ function closeModal(){ document.getElementById('mask').classList.remove('show');
 function renderMenu(){
   var m = document.getElementById('acctMenu');
   m.innerHTML = '';
-  m.appendChild(el('div', 'who', '当前：' + A().name));
-  Object.keys(S.accounts).forEach(function(uid){
-    var a = S.accounts[uid];
-    var b = el('button', null, (uid === S.currentUid ? '● ' : '○ ') + a.name + (a.hash ? ' 🔒' : ''));
-    b.onclick = function(){ switchAccount(uid); };
-    m.appendChild(b);
-  });
+  m.appendChild(el('div', 'who', '已登录：' + A().name + (A().hash ? ' 🔒' : '')));
+  var bOut = el('button', null, '退出登录 / 切换账号');
+  bOut.onclick = function(){ m.classList.remove('show'); logout(); };
+  m.appendChild(bOut);
   m.appendChild(el('div', 'sep'));
   var bNew = el('button', null, '＋ 新建账号');
-  bNew.onclick = function(){ m.classList.remove('show'); newAccountFlow(); };
+  bNew.onclick = function(){ m.classList.remove('show'); newAccountFlow(true); };
   m.appendChild(bNew);
   var bPass = el('button', null, '设置/修改口令');
   bPass.onclick = function(){ m.classList.remove('show'); setPassFlow(); };
@@ -974,17 +1093,45 @@ function askPass(title, cb){
   inp.addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); ok.click(); } });
 }
 
-function newAccountFlow(){
-  var name = prompt('新账号名称（例如：小明）：');
-  if (!name) return;
-  name = name.trim().slice(0, 12);
-  if (!name) return;
-  var uid = 'u_' + Date.now().toString(36);
-  S.accounts[uid] = newAccount(uid, name);
-  S.currentUid = uid;
-  UI.view = 'practice'; UI.test = null;
-  save(true); setNav(); renderMenu(); renderTabs(); render();
-  toast('已创建并切换到「' + name + '」');
+function logout(){
+  clearSession();
+  UI.test = null;
+  document.getElementById('acctMenu').classList.remove('show');
+  renderLogin();
+  toast('已退出登录');
+}
+
+function newAccountFlow(fromLogin){
+  var wrap = document.createElement('div');
+  wrap.appendChild(el('h4', null, '新建账号'));
+  wrap.appendChild(el('p', null, '账号只保存在本机浏览器。口令用于防止把成绩记到别人账号上。'));
+  var n1 = document.createElement('input'); n1.type = 'text'; n1.placeholder = '账号名称（如：小明）'; n1.maxLength = 12;
+  var n2 = document.createElement('input'); n2.type = 'password'; n2.placeholder = '设置口令（至少 4 位）';
+  var n3 = document.createElement('input'); n3.type = 'password'; n3.placeholder = '再输一次';
+  wrap.appendChild(n1); wrap.appendChild(n2); wrap.appendChild(n3);
+  var row = el('div', 'row');
+  var c = el('button', 'btn', '取消'); c.onclick = closeModal;
+  var ok = el('button', 'btn pri', '创建');
+  ok.onclick = function(){
+    var name = (n1.value || '').trim();
+    if (!name){ toast('请填写账号名称'); return; }
+    if (n2.value.length < 4){ toast('口令至少 4 位'); return; }
+    if (n2.value !== n3.value){ toast('两次输入不一致'); return; }
+    var uid = 'u_' + Date.now().toString(36);
+    var acct = newAccount(uid, name.slice(0,12));
+    acct.salt = makeSalt();
+    hashPass(n2.value, acct.salt, function(h){
+      acct.hash = h; acct.lastLogin = Date.now();
+      S.accounts[uid] = acct; S.currentUid = uid;
+      setSession(uid, !!S.rememberLogin);
+      save(true); closeModal();
+      UI.test = null; UI.view = 'practice';
+      setChrome(true); setNav(); renderMenu(); renderTabs(); render();
+      toast('已创建并登录「' + acct.name + '」');
+    });
+  };
+  row.appendChild(c); row.appendChild(ok); wrap.appendChild(row);
+  openModal(wrap, function(m){ var i = m.querySelector('input'); if (i) i.focus(); });
 }
 
 function setPassFlow(){
@@ -1076,11 +1223,21 @@ document.addEventListener('click', function(e){
 
 window.addEventListener('beforeunload', function(){ save(true); });
 
-setNav(); renderTabs(); render();
-if (S.migratedFromV1 && !S.seenMigrate){
-  S.seenMigrate = true; save(true);
-  setTimeout(function(){ toast('已把旧版练习记录迁入「账号一」'); }, 700);
-}
+(function boot(){
+  var sess = getSession();
+  if (sess && S.accounts[sess]){
+    S.currentUid = sess;
+    UI.test = (S.accounts[sess].currentTest && S.accounts[sess].currentTest.keys && S.accounts[sess].currentTest.keys.length) ? S.accounts[sess].currentTest : null;
+    if (UI.test && !UI.test.submitted) UI.view = 'test';
+    setChrome(true); setNav(); renderTabs(); render();
+  } else {
+    renderLogin();
+  }
+  if (S.migratedFromV1 && !S.seenMigrate){
+    S.seenMigrate = true; save(true);
+    setTimeout(function(){ toast('已把旧版练习记录迁入「账号一」'); }, 700);
+  }
+})();
 })();
 </script>
 </body>
