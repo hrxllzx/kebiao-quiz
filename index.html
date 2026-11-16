@@ -879,7 +879,7 @@ document.addEventListener('keydown', function(e){
 function judgeOnNext(q, card, st, fullans, nextBtn){
   var p = P(), inputs = card.querySelectorAll('input'), any = false;
   for (var i = 0; i < inputs.length; i++){ if (inputs[i].value.trim()){ any = true; break; } }
-  if (!any){ if (nextBtn) nextBtn.textContent = '下一题 →'; return true; }   // 一个字没写：不判，直接走
+  // 一个字都没写也按错的处理（和检查出错一样：标红、给答案、停在原地）
   var s = p.status[q.key];
   var fresh = (Date.now() - Number(card.dataset.blurAt || 0)) < 800;        // 刚被失焦自动判过（还没看到结果）
   if (s === 'ok' || s === 'seen'){ if (nextBtn) nextBtn.textContent = '下一题 →'; return true; }
@@ -892,7 +892,7 @@ function judgeOnNext(q, card, st, fullans, nextBtn){
     return true;
   }
   if (nextBtn) nextBtn.textContent = '看完了，下一题 →';
-  toast('不对的地方已经标红，再点一次继续');
+  toast(any ? '不对的地方已经标红，再点一次继续' : '这题还空着，按答错算，答案已标出；再点一次继续');
   return false;
 }
 
