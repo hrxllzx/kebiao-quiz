@@ -140,6 +140,10 @@ main{padding:14px 12px 8px; max-width:720px; margin:0 auto}
 .rnav{display:flex; gap:10px; align-items:center; margin-top:14px}
 .rnav .btn{flex:1; padding:13px; font-size:15px; border-radius:12px}
 .rprog{font-size:13px; color:var(--ink3); text-align:center; margin-top:10px; font-variant-numeric:tabular-nums}
+.jumpbar{display:flex; align-items:center; justify-content:center; gap:8px; margin-top:10px; font-size:13.5px; color:var(--ink2)}
+.jumpbar .jumpnum{width:72px; padding:7px 6px; font:inherit; font-size:15px; text-align:center; border:1px solid var(--line); border-radius:9px; background:var(--card); color:var(--ink)}
+.jumpbar .jumpnum::-webkit-outer-spin-button,.jumpbar .jumpnum::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.jumpbar .btn{padding:7px 14px; font-size:13px; border-radius:9px}
 /* ---------- 底栏 ---------- */
 .statbar{
   position:fixed; left:0; right:0; bottom:0; z-index:30;
@@ -573,6 +577,30 @@ function curList(){
   return p.view === 'all' ? QS : QS.filter(function(q){ return String(q.setNo) === p.view; });
 }
 
+/* 跳题：输入题号直接跳到该题（答题/背诵两种模式共用） */
+function buildJumpBar(root, list, p){
+  var bar = el('div', 'jumpbar');
+  bar.appendChild(el('span', null, '跳到第'));
+  var inp = document.createElement('input');
+  inp.type = 'number'; inp.min = 1; inp.max = list.length; inp.value = p.rIdx + 1;
+  inp.className = 'jumpnum'; inp.autocomplete = 'off';
+  var total = el('span', null, '/ ' + list.length + ' 题');
+  var go = el('button', 'btn', '跳转');
+  function doJump(){
+    var v = parseInt(inp.value, 10);
+    if (!v || v < 1) v = 1;
+    if (v > list.length) v = list.length;
+    p.rIdx = v - 1; save(true); render();
+  }
+  go.onclick = function(e){ if (e && e.stopPropagation) e.stopPropagation(); doJump(); };
+  inp.addEventListener('keydown', function(e){
+    e.stopPropagation();
+    if (e.key === 'Enter'){ e.preventDefault(); doJump(); }
+  });
+  bar.appendChild(inp); bar.appendChild(total); bar.appendChild(go);
+  root.appendChild(bar);
+}
+
 /* ================= 渲染入口 ================= */
 function render(){
   var root = document.getElementById('root');
@@ -696,6 +724,7 @@ function renderPractice(root){
   };
   nav.appendChild(prev); nav.appendChild(next);
   root.appendChild(nav);
+  buildJumpBar(root, list, p);
   root.appendChild(el('div', 'rprog', (p.rIdx+1) + ' / ' + list.length + '　·　' + q.setLabel + ' 第' + q.no + '题'));
   window.scrollTo({ top:0, behavior:'smooth' });
 
@@ -846,6 +875,7 @@ function renderRecite(root){
   var next = el('button', 'btn pri', '下一题 →'); next.onclick = function(e){ e.stopPropagation(); goRecite(1); };
   nav.appendChild(prev); nav.appendChild(next);
   root.appendChild(nav);
+  buildJumpBar(root, list, p);
   root.appendChild(el('div', 'rprog', (p.rIdx + 1) + ' / ' + list.length + '　·　' + q.setLabel + ' 第' + q.no + '题'));
   root.appendChild(el('div', 'hinttap', '空格：显示/收起答案　·　← →：换题　·　左右滑动也能换'));
 
