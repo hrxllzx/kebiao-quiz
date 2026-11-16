@@ -255,11 +255,11 @@ var K1 = 'kebiao_quiz_v1', K2 = 'kebiao_quiz_v2';
 var PUNCT = /[\s\u3000，。、；：""''（）()《》〈〉？！,.;:?!'"`·—…\-_~～]/g;
 
 /* ================= 题库（不变） ================= */
-var SETS = DATA.sets.map(function(s, si){ return { si:si, title:s.title, no:s.no, items:s.items }; });
+var SETS = DATA.sets.map(function(s, si){ return { si:si, title:s.title, no:s.no, label:(s.label || ('练习 ' + s.no)), items:s.items }; });
 var QS = [], byKey = {};
 SETS.forEach(function(s){
   s.items.forEach(function(it){
-    var q = { key: s.si + '-' + it.no, si:s.si, setNo:s.no, no:it.no,
+    var q = { key: s.si + '-' + it.no, si:s.si, setNo:s.no, setLabel:s.label, no:it.no,
               segs:it.segs, fills:it.fills, full:it.a, n:it.fills.length };
     QS.push(q); byKey[q.key] = q;
   });
@@ -555,8 +555,8 @@ function renderTabs(){
     else { if (!p.shuffleOrder.length) p.shuffleOrder = shuffle(QS.map(function(q){return q.key;})); p.view = 'shuffle'; toast('已打乱'); }
     p.rIdx = 0; save(true); renderTabs(); render();
   }, '全部打乱顺序；再点一次重新洗牌');
-  SETS.forEach(function(s){
-    chip('练习 ' + s.no, p.view === String(s.no), function(){ p.view = String(s.no); p.rIdx = 0; save(true); renderTabs(); render(); }, s.title);
+  if (SETS.length > 1) SETS.forEach(function(s){
+    chip(s.label, p.view === String(s.no), function(){ p.view = String(s.no); p.rIdx = 0; save(true); renderTabs(); render(); }, s.title);
   });
   var wbCount = Object.keys(WB()).filter(function(k){ return !WB()[k].mastered; }).length;
   chip('待练错题 ' + wbCount, p.view === 'wrong', function(){ UI.view = 'wrong'; save(true); setNav(); render(); }, '跳到错题本');
@@ -565,6 +565,7 @@ function renderTabs(){
 /* ---------- 练习：题目列表 ---------- */
 function curList(){
   var p = P();
+  if (p.view !== 'all' && p.view !== 'shuffle' && p.view !== 'wrong' && !SETS.some(function(s){ return String(s.no) === String(p.view); })){ p.view = 'all'; }
   if (p.view === 'shuffle'){
     if (!p.shuffleOrder || !p.shuffleOrder.length) p.shuffleOrder = shuffle(QS.map(function(q){return q.key;}));
     return p.shuffleOrder.map(function(k){ return byKey[k]; }).filter(Boolean);
@@ -619,7 +620,7 @@ function renderPractice(root){
   card.id = 'c-' + q.key;
   var head = el('div', 'qhead');
   head.appendChild(el('span', 'qno', '第 ' + q.no + ' 题'));
-  head.appendChild(el('span', 'qtag', '练习' + q.setNo));
+  head.appendChild(el('span', 'qtag', q.setLabel));
   head.appendChild(wbChip(q.key));
   var st = el('span', 'qst'); head.appendChild(st);
   card.appendChild(head);
@@ -695,7 +696,7 @@ function renderPractice(root){
   };
   nav.appendChild(prev); nav.appendChild(next);
   root.appendChild(nav);
-  root.appendChild(el('div', 'rprog', (p.rIdx+1) + ' / ' + list.length + '　·　练习' + q.setNo + ' 第' + q.no + '题'));
+  root.appendChild(el('div', 'rprog', (p.rIdx+1) + ' / ' + list.length + '　·　' + q.setLabel + ' 第' + q.no + '题'));
   window.scrollTo({ top:0, behavior:'smooth' });
 
   function onInput(){
@@ -802,7 +803,7 @@ function renderRecite(root){
   var card = el('div', 'card rcard');
   var head = el('div', 'qhead');
   head.appendChild(el('span', 'qno', '第 ' + q.no + ' 题'));
-  head.appendChild(el('span', 'qtag', '练习' + q.setNo));
+  head.appendChild(el('span', 'qtag', q.setLabel));
   head.appendChild(wbChip(q.key));
   card.appendChild(head);
 
@@ -845,7 +846,7 @@ function renderRecite(root){
   var next = el('button', 'btn pri', '下一题 →'); next.onclick = function(e){ e.stopPropagation(); goRecite(1); };
   nav.appendChild(prev); nav.appendChild(next);
   root.appendChild(nav);
-  root.appendChild(el('div', 'rprog', (p.rIdx + 1) + ' / ' + list.length + '　·　练习' + q.setNo + ' 第' + q.no + '题'));
+  root.appendChild(el('div', 'rprog', (p.rIdx + 1) + ' / ' + list.length + '　·　' + q.setLabel + ' 第' + q.no + '题'));
   root.appendChild(el('div', 'hinttap', '空格：显示/收起答案　·　← →：换题　·　左右滑动也能换'));
 
   window.scrollTo({ top:0, behavior:'smooth' });
@@ -1051,7 +1052,7 @@ function renderTest(root){
   f1.appendChild(el('label', null, '范围'));
   var sel = document.createElement('select');
   sel.appendChild(new Option('全部 ' + QS.length + ' 题', 'all'));
-  SETS.forEach(function(s){ sel.appendChild(new Option('练习 ' + s.no + '（' + s.items.length + ' 题）', String(s.no))); });
+  if (SETS.length > 1) SETS.forEach(function(s){ sel.appendChild(new Option(s.label + '（' + s.items.length + ' 题）', String(s.no))); });
   var todoN = Object.keys(WB()).filter(function(k){ return !WB()[k].mastered; }).length;
   if (todoN) sel.appendChild(new Option('错题本（' + todoN + ' 题）', 'wrong'));
   f1.appendChild(sel);
