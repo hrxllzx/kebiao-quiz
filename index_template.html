@@ -71,14 +71,6 @@ header.top{
 .rcard .rlabel{font-size:11.5px; color:var(--ink3); font-weight:700; letter-spacing:.5px}
 .rcard .rtext{font-size:16.5px; color:var(--ok); line-height:2; margin-top:4px; font-weight:600}
 .rcard .rblanks{font-size:13px; color:var(--ink2); margin-top:6px; line-height:1.9}
-.pick{max-height:56vh; overflow:auto; margin-top:10px}
-.pick .phead{font-size:11.5px; color:var(--ink3); font-weight:700; letter-spacing:.5px; margin:10px 2px 4px}
-.prow{display:flex; align-items:center; gap:8px; padding:6px 2px; border-bottom:1px solid var(--line)}
-.prow .n{flex:0 0 auto; font-size:11.5px; color:var(--ink3); font-variant-numeric:tabular-nums}
-.prow .t{flex:1; min-width:0; font-size:13px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.prow .mini{flex:0 0 auto; border:1px solid var(--line); background:var(--card); color:var(--ink2);
-  font-family:inherit; font-size:12px; font-weight:600; padding:4px 11px; border-radius:999px; cursor:pointer}
-.prow .mini.on{color:var(--warn); background:var(--warn-soft); border-color:color-mix(in srgb,var(--warn) 45%, var(--line))}
 /* ---------- 卡片 ---------- */
 main{padding:14px 12px 8px; max-width:720px; margin:0 auto}
 .sec{
@@ -996,44 +988,8 @@ function renderWrong(root){
   panel.appendChild(row);
   root.appendChild(panel);
 
-  /* 手动挑选：自己决定哪些题进错题本 */
-  var pick = el('div', 'panel');
-  pick.appendChild(el('h3', null, '手动挑选题目'));
-  pick.appendChild(el('p', 'tip', '每天想往错题本里放几题、或拿掉几题，就在这里点。手动加入的题不会被「连对 2 次」自动移出，只有你自己点「移出」才会走。'));
-  var pbtn = el('button', 'btn pri', '展开全部 ' + QS.length + ' 题');
-  var plist = el('div', 'pick'); plist.style.display = 'none';
-  pbtn.onclick = function(){
-    var open = plist.style.display !== 'none';
-    plist.style.display = open ? 'none' : 'block';
-    pbtn.textContent = open ? ('展开全部 ' + QS.length + ' 题') : '收起清单';
-    if (!open) buildPick();
-  };
-  pick.appendChild(pbtn); pick.appendChild(plist);
-  root.appendChild(pick);
-
-  function buildPick(){
-    plist.innerHTML = '';
-    var lastSet = null;
-    QS.forEach(function(q){
-      if (q.setNo !== lastSet){ lastSet = q.setNo; plist.appendChild(el('div', 'phead', '练习 ' + q.setNo + ' · ' + SETS[q.si].title)); }
-      var row = el('div', 'prow');
-      row.appendChild(el('span', 'n', '第' + q.no + '题'));
-      var txt = q.segs.join(' ＿ ').replace(/\s+/g, ' ').trim();
-      row.appendChild(el('span', 't', txt.length > 24 ? txt.slice(0, 24) + '…' : txt));
-      var b = el('button', 'mini' + (WB()[q.key] ? ' on' : ''), WB()[q.key] ? '移出' : '加入');
-      b.onclick = function(){
-        toggleWB(q.key);
-        var has = !!WB()[q.key];
-        b.className = 'mini' + (has ? ' on' : '');
-        b.textContent = has ? '移出' : '加入';
-      };
-      row.appendChild(b);
-      plist.appendChild(row);
-    });
-  }
-
   if (!keys.length){
-    root.appendChild(el('div', 'empty', '还没有错题。\n做错的题会自动出现在这里，也可以在下面「手动挑选题目」里自己加。'));
+    root.appendChild(el('div', 'empty', '还没有错题。\n做错的题会自动出现在这里；也可以在做题时点每题右上角的「☆ 加入错题本」自己放进来。'));
     return;
   }
   keys.forEach(function(k){
