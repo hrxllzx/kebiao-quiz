@@ -343,7 +343,71 @@ function normalize(st){
   if (!st.accounts[st.currentUid]) st.currentUid = 'acc_a';
   return st;
 }
+
+/* ===== 旧版「分组+题号」→ 单池：迁移存储 key，保证错题本/进度不丢 ===== */
+function poolRemapKey(k){
+  if (byKey[k]) return k;                 // 已是新池 key（0-N）
+  var m = /^(\d+)-(\d+)$/.exec(k);
+  if (!m) return k;
+  var si = parseInt(m[1],10), n = parseInt(m[2],10);
+  if (si >= 0 && si <= 3 && n >= 1 && n <= 10){   // 旧部署：si 0..3，每组 10 题
+    var nk = '0-' + (si*10 + n);
+    if (byKey[nk]) return nk;
+  }
+  return k;
+}
+function poolRemapAnsKey(ak){            // 答案 key 形如 组-题号-空号
+  var m = /^(\d+)-(\d+)-(\d+)$/.exec(ak);
+  if (!m) return ak;
+  var base = m[1] + '-' + m[2], blank = m[3];
+  var nk = poolRemapKey(base);
+  return nk === base ? ak : (nk + '-' + blank);
+}
+function poolRemapMap(src, fn){
+  var out = {};
+  Object.keys(src || {}).forEach(function(k){ out[fn(k)] = src[k]; });
+  return out;
+}
+function migrateStoreKeys(){
+  Object.keys(S.accounts).forEach(function(uid){
+    var a = S.accounts[uid], p = a.progress;
+    if (p && p.answers)  p.answers  = poolRemapMap(p.answers,  poolRemapAnsKey);
+    if (p && p.status)   p.status   = poolRemapMap(p.status,   poolRemapKey);
+    if (p && p.revealed) p.revealed = poolRemapMap(p.revealed, poolRemapKey);
+    if (p && p.shuffleOrder && p.shuffleOrder.length) p.shuffleOrder = p.shuffleOrder.map(poolRemapKey);
+    if (a.wrongbook){
+      var wb = {}, src = a.wrongbook;
+      Object.keys(src).forEach(function(k){
+        var nk = poolRemapKey(k), rec = src[k];
+        if (!wb[nk]){ rec.key = nk; wb[nk] = rec; }
+        else {
+          var t = wb[nk];
+          t.wrongCount = Math.max(t.wrongCount||0, rec.wrongCount||0);
+          t.mastered = !!(t.mastered && rec.mastered);
+          if (rec.addedAt && (!t.addedAt || rec.addedAt < t.addedAt)) t.addedAt = rec.addedAt;
+          if ((rec.lastWrongAt||0) > (t.lastWrongAt||0)) t.lastWrongAt = rec.lastWrongAt;
+        }
+      });
+      a.wrongbook = wb;
+    }
+    var ct = a.currentTest;
+    if (ct){
+      if (ct.keys) ct.keys = ct.keys.map(poolRemapKey);
+      if (ct.answers) ct.answers = poolRemapMap(ct.answers, poolRemapAnsKey);
+    }
+    (a.tests || []).forEach(function(t){
+      if (t.itemKeys) t.itemKeys = t.itemKeys.map(poolRemapKey);
+      if (t.answers) t.answers = poolRemapMap(t.answers, poolRemapAnsKey);
+      if (t.result){
+        if (t.result.wrongItemKeys) t.result.wrongItemKeys = t.result.wrongItemKeys.map(poolRemapKey);
+        if (t.result.perItem) t.result.perItem = poolRemapMap(t.result.perItem, poolRemapKey);
+      }
+    });
+  });
+}
+
 var S = normalize(readRaw(K2) && readRaw(K2).v === 2 ? readRaw(K2) : buildStore());
+if (!S._poolMigrated){ migrateStoreKeys(); S._poolMigrated = true; try{ writeRaw(K2, S); }catch(e){} }
 var saveTimer = null;
 function save(now){
   if (saveTimer) clearTimeout(saveTimer);
