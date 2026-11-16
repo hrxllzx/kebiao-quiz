@@ -695,7 +695,12 @@ function renderPractice(root){
 
   var nav = el('div', 'rnav');
   var prev = el('button', 'btn', '← 上一题'); prev.onclick = function(){ p.rIdx = (p.rIdx - 1 + list.length) % list.length; save(true); render(); };
-  var next = el('button', 'btn pri', '下一题 →'); next.onclick = function(){ p.rIdx = (p.rIdx + 1) % list.length; save(true); render(); };
+  var next = el('button', 'btn pri', '下一题 →');
+  next.onclick = function(){
+    if (!judgeOnNext(q, card, st, fullans, next)) return;   // 有错就留在原地看答案
+    p.rIdx = (p.rIdx + 1) % list.length;
+    save(true); render();
+  };
   nav.appendChild(prev); nav.appendChild(next);
   root.appendChild(nav);
   root.appendChild(el('div', 'rprog', (p.rIdx+1) + ' / ' + list.length + '　·　练习' + q.setNo + ' 第' + q.no + '题'));
@@ -705,6 +710,7 @@ function renderPractice(root){
     var k = this.dataset.k;
     if (this.value) p.answers[k] = this.value; else delete p.answers[k];
     this.classList.remove('ok','bad','warn');
+    delete p.status[q.key];
     var ln = this.parentNode.querySelector('.ansline[data-for="' + k + '"]');
     if (ln) ln.remove();
     save(); updateStat(); renderTabs();
@@ -869,6 +875,27 @@ document.addEventListener('keydown', function(e){
   }
 });
 
+/* 点「下一题」时自动判分：全对/全空/已看过错 → 直接走；第一次判出错 → 停在原地看答案 */
+function judgeOnNext(q, card, st, fullans, nextBtn){
+  var p = P(), inputs = card.querySelectorAll('input'), any = false;
+  for (var i = 0; i < inputs.length; i++){ if (inputs[i].value.trim()){ any = true; break; } }
+  if (!any){ if (nextBtn) nextBtn.textContent = '下一题 →'; return true; }   // 一个字没写：不判，直接走
+  var s = p.status[q.key];
+  var fresh = (Date.now() - Number(card.dataset.blurAt || 0)) < 800;        // 刚被失焦自动判过（还没看到结果）
+  if (s === 'ok' || s === 'seen'){ if (nextBtn) nextBtn.textContent = '下一题 →'; return true; }
+  if (s === 'bad' && !fresh){ if (nextBtn) nextBtn.textContent = '下一题 →'; return true; }  // 错误已经看过了
+  var allOk = judgeCard(q, card, st, fullans, false);
+  delete card.dataset.blurAt;                      // 这次判分是我们自己触发的，别让下一次点击又判一遍
+  if (allOk){
+    if (nextBtn) nextBtn.textContent = '下一题 →';
+    toast('✓ 全对，已到下一题');
+    return true;
+  }
+  if (nextBtn) nextBtn.textContent = '看完了，下一题 →';
+  toast('不对的地方已经标红，再点一次继续');
+  return false;
+}
+
 function markOk(card, st, label){
   card.classList.add('ok'); card.classList.remove('bad');
   st.className = 'qst ok'; st.textContent = label || '✓ 全对';
@@ -912,7 +939,9 @@ function judgeCard(q, card, st, fullans, loud){
   line2.appendChild(document.createTextNode('参考答案：'));
   line2.appendChild(el('b', null, q.full));
   fullans.appendChild(line2);
+  if (!loud) card.dataset.blurAt = String(Date.now());
   save(); updateStat(); renderTabs();
+  return allOk;
 }
 
 /* ================= 错题本 ================= */
