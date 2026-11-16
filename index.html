@@ -57,6 +57,28 @@ header.top{
   font-family:inherit; cursor:pointer; white-space:nowrap; transition:.15s;
 }
 .tabs button.on{background:var(--pri); border-color:var(--pri); color:#fff}
+/* ---------- 背诵模式恢复 + 手动错题本 ---------- */
+.tabrow{display:flex; align-items:center; gap:8px; padding:0 14px 10px}
+.tabrow .tabs{padding:0; flex:1; min-width:0}
+.seg.mini{padding:2px}
+.seg.mini button{font-size:11.5px; padding:4px 10px}
+.wbt{margin-left:auto; flex:0 0 auto; border:1px solid var(--line); background:var(--card); color:var(--ink3);
+  font-family:inherit; font-size:11.5px; font-weight:700; padding:2px 9px; border-radius:999px; cursor:pointer; transition:.15s}
+.wbt.on{color:var(--warn); background:var(--warn-soft); border-color:color-mix(in srgb,var(--warn) 45%, var(--line))}
+.rcard .qbody{font-size:18px; line-height:2.1}
+.rcard .rans{display:none; margin-top:14px; padding-top:12px; border-top:1px dashed var(--line)}
+.rcard.reveal .rans{display:block}
+.rcard .rlabel{font-size:11.5px; color:var(--ink3); font-weight:700; letter-spacing:.5px}
+.rcard .rtext{font-size:16.5px; color:var(--ok); line-height:2; margin-top:4px; font-weight:600}
+.rcard .rblanks{font-size:13px; color:var(--ink2); margin-top:6px; line-height:1.9}
+.pick{max-height:56vh; overflow:auto; margin-top:10px}
+.pick .phead{font-size:11.5px; color:var(--ink3); font-weight:700; letter-spacing:.5px; margin:10px 2px 4px}
+.prow{display:flex; align-items:center; gap:8px; padding:6px 2px; border-bottom:1px solid var(--line)}
+.prow .n{flex:0 0 auto; font-size:11.5px; color:var(--ink3); font-variant-numeric:tabular-nums}
+.prow .t{flex:1; min-width:0; font-size:13px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.prow .mini{flex:0 0 auto; border:1px solid var(--line); background:var(--card); color:var(--ink2);
+  font-family:inherit; font-size:12px; font-weight:600; padding:4px 11px; border-radius:999px; cursor:pointer}
+.prow .mini.on{color:var(--warn); background:var(--warn-soft); border-color:color-mix(in srgb,var(--warn) 45%, var(--line))}
 /* ---------- 卡片 ---------- */
 main{padding:14px 12px 8px; max-width:720px; margin:0 auto}
 .sec{
@@ -75,7 +97,7 @@ main{padding:14px 12px 8px; max-width:720px; margin:0 auto}
 .qhead{display:flex; align-items:center; gap:8px; margin-bottom:6px}
 .qno{font-size:13px; font-weight:800; color:var(--pri); letter-spacing:.3px}
 .qtag{font-size:11px; color:var(--ink3); background:var(--bg); border-radius:6px; padding:1px 6px}
-.qst{margin-left:auto; font-size:12px; font-weight:700; padding:1px 8px; border-radius:999px; display:none}
+.qst{margin-left:2px; font-size:12px; font-weight:700; padding:1px 8px; border-radius:999px; display:none}
 .qst.ok{display:inline-block; color:var(--ok); background:var(--ok-soft)}
 .qst.bad{display:inline-block; color:var(--bad); background:var(--bad-soft)}
 .qbody{font-size:15.5px; line-height:2.15; word-break:break-word}
@@ -217,7 +239,10 @@ main{padding:14px 12px 8px; max-width:720px; margin:0 auto}
     </div>
     <button class="acct" id="acctBtn"><span id="acctName">账号一</span> ▾</button>
   </div>
-  <div class="tabs" id="tabs"></div>
+  <div class="tabrow">
+    <div class="tabs" id="tabs"></div>
+    <div class="seg mini" id="modeSeg"></div>
+  </div>
   <div class="menu" id="acctMenu"></div>
 </header>
 
@@ -524,6 +549,7 @@ function setNav(){
 function renderTabs(){
   var box = document.getElementById('tabs');
   box.innerHTML = '';
+  renderModeSeg();
   if (UI.view !== 'practice'){ box.style.display = 'none'; return; }
   box.style.display = 'flex';
   var p = P();
@@ -559,6 +585,7 @@ function render(){
   var root = document.getElementById('root');
   root.innerHTML = '';
   document.getElementById('tabs').style.display = (UI.view === 'practice') ? 'flex' : 'none';
+  renderModeSeg();
   if (UI.view === 'practice'){ renderPractice(root); }
   else if (UI.view === 'wrong'){ renderWrong(root); }
   else { renderTest(root); }
@@ -589,6 +616,7 @@ function buildQBody(q, readonly){
 function renderPractice(root){
   var p = P();
   if (p.view === 'wrong'){ UI.view = 'wrong'; setNav(); render(); return; }
+  if (p.mode === 'recite'){ renderRecite(root); return; }
   var list = curList();
   if (!list.length){ root.appendChild(el('div', 'empty', '本组暂无题目')); return; }
   if (p.rIdx >= list.length) p.rIdx = 0;
@@ -600,6 +628,7 @@ function renderPractice(root){
   var head = el('div', 'qhead');
   head.appendChild(el('span', 'qno', '第 ' + q.no + ' 题'));
   head.appendChild(el('span', 'qtag', '练习' + q.setNo));
+  head.appendChild(wbChip(q.key));
   var st = el('span', 'qst'); head.appendChild(st);
   card.appendChild(head);
 
@@ -688,6 +717,158 @@ function renderPractice(root){
   }
 }
 
+/* ================= 错题本：手动加入 / 移出 ================= */
+function ensureWB(key){
+  var wb = WB();
+  var rec = wb[key];
+  if (!rec){
+    rec = wb[key] = { key:key, wrongCount:0, streak:0, mastered:false, blanks:{}, firstAt:Date.now() };
+  }
+  rec.manual = true;
+  if (!rec.addedAt) rec.addedAt = Date.now();
+  return rec;
+}
+function toggleWB(key){
+  var wb = WB();
+  if (wb[key]){ delete wb[key]; toast('已移出错题本'); }
+  else { ensureWB(key); toast('已加入错题本'); }
+  save(true);
+  renderTabs();
+}
+function paintWbChip(b, key){
+  var has = !!WB()[key];
+  b.className = 'wbt' + (has ? ' on' : '');
+  b.textContent = has ? '★ 已收录' : '☆ 加入错题本';
+  b.title = has ? '点一下就从错题本移出' : '点一下加入错题本';
+}
+function wbChip(key){
+  var b = el('button', 'wbt');
+  paintWbChip(b, key);
+  b.onclick = function(e){
+    if (e && e.stopPropagation) e.stopPropagation();
+    toggleWB(key);
+    paintWbChip(b, key);
+  };
+  return b;
+}
+
+/* ================= 模式切换：答题 / 背诵 ================= */
+function renderModeSeg(){
+  var seg = document.getElementById('modeSeg');
+  if (!seg) return;
+  var show = (UI.view === 'practice') && (P().view !== 'wrong');
+  seg.style.display = show ? 'flex' : 'none';
+  if (!show) return;
+  if (seg.dataset.built === '1'){ paintModeSeg(seg); return; }
+  seg.innerHTML = '';
+  [['quiz', '答题'], ['recite', '背诵']].forEach(function(pair){
+    var b = el('button', '', pair[1]);
+    b.dataset.m = pair[0];
+    b.onclick = function(){
+      var p = P();
+      if (p.mode === pair[0]) return;
+      p.mode = pair[0];
+      save(true); paintModeSeg(seg); render();
+    };
+    seg.appendChild(b);
+  });
+  seg.dataset.built = '1';
+  paintModeSeg(seg);
+}
+function paintModeSeg(seg){
+  var mode = P().mode;
+  var btns = seg.querySelectorAll('button');
+  for (var i = 0; i < btns.length; i++){
+    btns[i].className = (btns[i].dataset.m === mode) ? 'on' : '';
+  }
+}
+
+/* ================= 背诵模式 ================= */
+function goRecite(d){
+  var list = curList();
+  if (!list.length) return;
+  var p = P();
+  p.rIdx = (p.rIdx + d + list.length) % list.length;
+  save(true);
+  render();
+}
+
+function renderRecite(root){
+  var p = P();
+  var list = curList();
+  if (!list.length){ root.appendChild(el('div', 'empty', '本组暂无题目')); return; }
+  if (p.rIdx >= list.length) p.rIdx = 0;
+  if (p.rIdx < 0) p.rIdx = 0;
+  var q = list[p.rIdx];
+
+  var card = el('div', 'card rcard');
+  var head = el('div', 'qhead');
+  head.appendChild(el('span', 'qno', '第 ' + q.no + ' 题'));
+  head.appendChild(el('span', 'qtag', '练习' + q.setNo));
+  head.appendChild(wbChip(q.key));
+  card.appendChild(head);
+
+  var body = el('div', 'qbody');
+  for (var i = 0; i < q.segs.length; i++){
+    if (q.segs[i]) body.appendChild(document.createTextNode(q.segs[i]));
+    if (i < q.n) body.appendChild(el('span', 'blank', '第' + (i + 1) + '空'));
+  }
+  card.appendChild(body);
+
+  var ans = el('div', 'rans');
+  ans.appendChild(el('div', 'rlabel', '参考答案'));
+  ans.appendChild(el('div', 'rtext', q.full));
+  ans.appendChild(el('div', 'rblanks', '填空依次：' + q.fills.join(' ／ ')));
+  card.appendChild(ans);
+
+  var hint = el('div', 'hinttap', '轻点卡片显示答案');
+  card.appendChild(hint);
+
+  card.onclick = function(){
+    card.classList.toggle('reveal');
+    var on = card.classList.contains('reveal');
+    hint.textContent = on ? '轻点收起答案' : '轻点卡片显示答案';
+  };
+
+  // 左右滑动换题
+  var sx = 0, sy = 0, tracking = false;
+  card.addEventListener('touchstart', function(e){ var t = e.touches[0]; sx = t.clientX; sy = t.clientY; tracking = true; }, {passive:true});
+  card.addEventListener('touchend', function(e){
+    if (!tracking) return;
+    tracking = false;
+    var t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+    if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.6) goRecite(dx < 0 ? 1 : -1);
+  }, {passive:true});
+
+  root.appendChild(card);
+
+  var nav = el('div', 'rnav');
+  var prev = el('button', 'btn', '← 上一题'); prev.onclick = function(e){ e.stopPropagation(); goRecite(-1); };
+  var next = el('button', 'btn pri', '下一题 →'); next.onclick = function(e){ e.stopPropagation(); goRecite(1); };
+  nav.appendChild(prev); nav.appendChild(next);
+  root.appendChild(nav);
+  root.appendChild(el('div', 'rprog', (p.rIdx + 1) + ' / ' + list.length + '　·　练习' + q.setNo + ' 第' + q.no + '题'));
+  root.appendChild(el('div', 'hinttap', '空格：显示/收起答案　·　← →：换题　·　左右滑动也能换'));
+
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+/* 键盘：背诵模式里 空格=看答案，← →=换题 */
+document.addEventListener('keydown', function(e){
+  if (UI.view !== 'practice' || P().mode !== 'recite') return;
+  var t = e.target, tag = t && t.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  var mask = document.getElementById('mask');
+  if (mask && mask.classList.contains('show')) return;
+  if (e.key === 'ArrowRight'){ e.preventDefault(); goRecite(1); }
+  else if (e.key === 'ArrowLeft'){ e.preventDefault(); goRecite(-1); }
+  else if (e.key === ' ' || e.key === 'Spacebar'){
+    e.preventDefault();
+    var c = document.querySelector('.rcard');
+    if (c) c.click();
+  }
+});
+
 function markOk(card, st, label){
   card.classList.add('ok'); card.classList.remove('bad');
   st.className = 'qst ok'; st.textContent = label || '✓ 全对';
@@ -749,19 +930,19 @@ function recordRight(q){
   if (!rec) return;
   rec.streak = (rec.streak || 0) + 1;
   rec.lastRightAt = Date.now();
-  if (rec.streak >= 2 && !rec.mastered){ rec.mastered = true; rec.masteredAt = Date.now(); }
+  if (rec.streak >= 2 && !rec.mastered && !rec.manual){ rec.mastered = true; rec.masteredAt = Date.now(); }
   save();
 }
 
 function renderWrong(root){
   var wb = WB();
   var keys = Object.keys(wb).filter(function(k){ return byKey[k]; });
-  keys.sort(function(a,b){ return (wb[b].lastWrongAt||0) - (wb[a].lastWrongAt||0); });
+  keys.sort(function(a,b){ return (wb[b].lastWrongAt||wb[b].addedAt||0) - (wb[a].lastWrongAt||wb[a].addedAt||0); });
   var todo = keys.filter(function(k){ return !wb[k].mastered; });
 
   var panel = el('div', 'panel');
   var h = el('h3', null, '错题本'); panel.appendChild(h);
-  panel.appendChild(el('p', 'tip', '共 ' + keys.length + ' 题进过错题本，其中待练 ' + todo.length + ' 题；连续答对 2 次自动标记为已掌握。'));
+  panel.appendChild(el('p', 'tip', '共 ' + keys.length + ' 题在错题本里，其中待练 ' + todo.length + ' 题。做错的题自动收录、连对 2 次自动标为已掌握；你在下面手动加入的题不会自动移出，要自己点「移出」。'));
   var row = el('div', 'field');
   var bStart = el('button', 'btn pri', '开始重练（' + todo.length + ' 题）');
   bStart.disabled = !todo.length;
@@ -786,8 +967,44 @@ function renderWrong(root){
   panel.appendChild(row);
   root.appendChild(panel);
 
+  /* 手动挑选：自己决定哪些题进错题本 */
+  var pick = el('div', 'panel');
+  pick.appendChild(el('h3', null, '手动挑选题目'));
+  pick.appendChild(el('p', 'tip', '每天想往错题本里放几题、或拿掉几题，就在这里点。手动加入的题不会被「连对 2 次」自动移出，只有你自己点「移出」才会走。'));
+  var pbtn = el('button', 'btn pri', '展开全部 ' + QS.length + ' 题');
+  var plist = el('div', 'pick'); plist.style.display = 'none';
+  pbtn.onclick = function(){
+    var open = plist.style.display !== 'none';
+    plist.style.display = open ? 'none' : 'block';
+    pbtn.textContent = open ? ('展开全部 ' + QS.length + ' 题') : '收起清单';
+    if (!open) buildPick();
+  };
+  pick.appendChild(pbtn); pick.appendChild(plist);
+  root.appendChild(pick);
+
+  function buildPick(){
+    plist.innerHTML = '';
+    var lastSet = null;
+    QS.forEach(function(q){
+      if (q.setNo !== lastSet){ lastSet = q.setNo; plist.appendChild(el('div', 'phead', '练习 ' + q.setNo + ' · ' + SETS[q.si].title)); }
+      var row = el('div', 'prow');
+      row.appendChild(el('span', 'n', '第' + q.no + '题'));
+      var txt = q.segs.join(' ＿ ').replace(/\s+/g, ' ').trim();
+      row.appendChild(el('span', 't', txt.length > 24 ? txt.slice(0, 24) + '…' : txt));
+      var b = el('button', 'mini' + (WB()[q.key] ? ' on' : ''), WB()[q.key] ? '移出' : '加入');
+      b.onclick = function(){
+        toggleWB(q.key);
+        var has = !!WB()[q.key];
+        b.className = 'mini' + (has ? ' on' : '');
+        b.textContent = has ? '移出' : '加入';
+      };
+      row.appendChild(b);
+      plist.appendChild(row);
+    });
+  }
+
   if (!keys.length){
-    root.appendChild(el('div', 'empty', '还没有错题。\n做错的题会自动出现在这里。'));
+    root.appendChild(el('div', 'empty', '还没有错题。\n做错的题会自动出现在这里，也可以在下面「手动挑选题目」里自己加。'));
     return;
   }
   keys.forEach(function(k){
@@ -795,8 +1012,10 @@ function renderWrong(root){
     var box = el('div', 'wbrow');
     box.appendChild(el('div', 'q', q.segs.join('____')));
     var meta = el('div', 'meta');
-    meta.appendChild(el('span', 'cnt', '错 ' + rec.wrongCount + ' 次'));
-    meta.appendChild(el('span', null, '最近 ' + fmtDate(rec.lastWrongAt)));
+    if (rec.wrongCount) meta.appendChild(el('span', 'cnt', '错 ' + rec.wrongCount + ' 次'));
+    else meta.appendChild(el('span', 'chip', '手动加入'));
+    if (rec.manual && rec.wrongCount) meta.appendChild(el('span', 'chip', '手动收录'));
+    meta.appendChild(el('span', null, (rec.lastWrongAt ? '最近 ' : '收录 ') + fmtDate(rec.lastWrongAt || rec.addedAt)));
     if (rec.mastered) meta.appendChild(el('span', 'chip ok', '已掌握'));
     else meta.appendChild(el('span', 'chip', '连续答对 ' + (rec.streak||0) + '/2'));
     box.appendChild(meta);
